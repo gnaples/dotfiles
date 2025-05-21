@@ -34,7 +34,7 @@ threshold = 12
 
 [templates]
 rofi.template = 'colors-rofi.rasi'
-rofi.target = '~/.config/rofi/shared/colors.rasi'
+rofi.target = '~/.config/rofi/wallust/colors-rofi.rasi'
 waybar.template = 'colors-waybar.css'
 waybar.target = '~/.config/waybar/colors-wallust.css'
 hypr.template = 'colors-hypr.conf'
