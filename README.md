@@ -52,26 +52,42 @@ which case run `stow -R <pkg>` to link it).
 
 ## Omarchy upgrades and this repo
 
-Omarchy's own upgrade process (`omarchy-upgrade`) directly overwrites several
-config files with new defaults (you'll see it leave behind
-`*.omarchy-upgrade-*.bak` files when it does). If one of the files it touches
-is a Stow symlink, the upgrade can replace the symlink with a brand new real
-file, silently "unstowing" it.
+Checked against Omarchy's actual update scripts (`/usr/share/omarchy/bin/omarchy-migrate`,
+`omarchy-refresh-config`, and the individual scripts under `migrations/`), most
+of the time an update is safe for symlinked configs:
+
+- Most per-version migrations edit files in place with `sed --follow-symlinks`
+  or plain `cp -f` — both write *through* a symlink into whatever it points
+  to (your repo file), leaving the symlink itself intact. A `.bak.<suffix>`
+  file appears next to it as a plain backup copy; the symlink is untouched.
+- `refresh_known_config_defaults` (the mechanism that produced most
+  `*.bak.<timestamp>` files you'll see) only touches a file if its content
+  hash matches a known *stock* default. Anything you've actually customized
+  has a different hash and gets skipped entirely.
+- The one path that **does** break a symlink is `copy_config_default`, used
+  for `always_copy_config_files` — a short, fixed list of "new config entry
+  point" files force-copied during a major-version migration (an
+  `omarchy-upgrade-to-<name>`-style jump, not routine updates). It does
+  `rm -f "$target"; cp -P default "$target"`, which deletes whatever is at
+  the target (symlink or not) and writes a fresh regular file. Your repo copy
+  is untouched by this — it's just no longer linked from the live path.
 
 A hook is installed at
 `~/.config/omarchy/hooks/post-update.d/restow-dotfiles.hook` (tracked in the
-`omarchy` package) that re-runs `stow --adopt` for every package after each
-Omarchy update. It uses `--adopt`, so it always keeps whatever ended up on
-disk (Omarchy's new default, if it changed something) and pulls it into the
-repo. After an update, run:
+`omarchy` package) that runs `stow -R` (plain restow, **not** `--adopt`) for
+every package after each Omarchy update. Because hooks run inline in your
+terminal during `omarchy-upgrade`, if a file did get unlinked this way you'll
+see a stow conflict warning printed right there in the upgrade output —
+nothing is silently overwritten either way. Then, by hand:
 
 ```sh
-cd ~/dotfiles && git status
+cd ~/dotfiles && stow --adopt -t ~ <pkg>   # keep Omarchy's new default (pulls it into the repo)
+# or
+cp ~/dotfiles/<pkg>/<path> <live path> && stow -R -t ~ <pkg>   # keep your version
 ```
 
-to see whether Omarchy changed anything you care about, and `git diff` /
-`git checkout -- <file>` to decide whether to keep the new default or restore
-your version.
+`git diff` in `~/dotfiles` afterwards always shows exactly what, if anything,
+Omarchy's update actually changed in a tracked file.
 
 ## Deliberately not tracked
 

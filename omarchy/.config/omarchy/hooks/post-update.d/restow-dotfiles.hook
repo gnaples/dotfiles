@@ -1,8 +1,19 @@
 #!/bin/bash
-# Re-links dotfiles-managed configs after an Omarchy update, in case the
-# update replaced a stowed symlink with a fresh real file. Uses --adopt so
-# whatever is on disk (Omarchy's new default, if changed) wins and gets
-# pulled into the repo — check `git status` in ~/dotfiles afterwards.
+# Re-links dotfiles-managed configs after an Omarchy update. Omarchy usually
+# edits config files in place (it goes out of its way to preserve symlinks,
+# e.g. `sed --follow-symlinks`, or plain `cp -f` which writes through a
+# symlink), so most updates need no action here at all. The exception is a
+# small set of "always copied" files, mainly during major-version migrations,
+# where Omarchy does `rm -f "$target"; cp -P default "$target"` — that
+# replaces the symlink with a fresh real file.
+#
+# Deliberately does NOT use `stow --adopt`: adopt would silently pull
+# whatever Omarchy just wrote into the repo, overwriting your tracked
+# customization with Omarchy's new default with no review. Plain restow
+# instead leaves any such file alone and just prints a conflict so you see it
+# in the terminal output of the update and can decide by hand:
+#   - keep Omarchy's new default: cd ~/dotfiles && stow --adopt -t ~ <pkg>
+#   - keep your version:          cp ~/dotfiles/<pkg>/<path> <live path>
 set -e
 
 DOTFILES="$HOME/dotfiles"
@@ -10,7 +21,16 @@ DOTFILES="$HOME/dotfiles"
 command -v stow >/dev/null 2>&1 || exit 0
 
 cd "$DOTFILES"
+conflicts=""
 for pkg in */; do
   pkg="${pkg%/}"
-  stow --adopt -t "$HOME" "$pkg" 2>/dev/null || true
+  out=$(stow -R -t "$HOME" "$pkg" 2>&1) || conflicts+="$out"$'\n'
 done
+
+if [[ -n $conflicts ]]; then
+  echo "dotfiles: some files were not re-linked after the update (Omarchy replaced them with new defaults):"
+  echo "$conflicts"
+  echo "Review with 'git -C ~/dotfiles diff' / 'git -C ~/dotfiles status', then either:"
+  echo "  cd ~/dotfiles && stow --adopt -t ~ <pkg>   # keep Omarchy's new default"
+  echo "  cp ~/dotfiles/<pkg>/<path> <live path>      # restore your version, then stow -R <pkg>"
+fi
