@@ -1,0 +1,12 @@
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status
+[pull]
+	rebase = true
+[init]
+	defaultBranch = master
+[user]
+	name = Gabriel Naples
+	email = gabe8480@gmail.com

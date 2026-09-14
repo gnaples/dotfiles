@@ -1,0 +1,16 @@
+#!/bin/bash
+# Re-links dotfiles-managed configs after an Omarchy update, in case the
+# update replaced a stowed symlink with a fresh real file. Uses --adopt so
+# whatever is on disk (Omarchy's new default, if changed) wins and gets
+# pulled into the repo — check `git status` in ~/dotfiles afterwards.
+set -e
+
+DOTFILES="$HOME/dotfiles"
+[ -d "$DOTFILES" ] || exit 0
+command -v stow >/dev/null 2>&1 || exit 0
+
+cd "$DOTFILES"
+for pkg in */; do
+  pkg="${pkg%/}"
+  stow --adopt -t "$HOME" "$pkg" 2>/dev/null || true
+done
