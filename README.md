@@ -13,6 +13,8 @@ dotfiles/
 ├── hypr/.config/hypr/...
 ├── omarchy/.config/omarchy/...   (branding, hooks, themes, extensions — not machine state)
 ├── bash/.bashrc, .bash_profile
+├── obsidian/                     (PKM structure — not stowed to $HOME, see below)
+├── obsidian-setup.sh
 └── ...
 ```
 
@@ -88,6 +90,43 @@ cp ~/dotfiles/<pkg>/<path> <live path> && stow -R -t ~ <pkg>   # keep your versi
 
 `git diff` in `~/dotfiles` afterwards always shows exactly what, if anything,
 Omarchy's update actually changed in a tracked file.
+
+## Obsidian PKM setup
+
+Unlike the other packages, `obsidian/` doesn't target `$HOME` — it targets
+whatever vault you point it at, since vaults live wherever you put them and
+you may have more than one. It's the *principle* of the setup, not your
+actual notes:
+
+```
+obsidian/
+├── Templates/          System, Decision, Runbook, Daily note templates
+├── Home.md             Dataview dashboard (stale docs, open decisions, etc.)
+└── .obsidian/
+    ├── daily-notes.json    points core Daily Notes at Daily/, using Templates/Daily
+    └── templates.json      points core Templates at Templates/
+```
+
+On a new machine or new vault:
+
+```sh
+./obsidian-setup.sh "/path/to/your/vault"
+```
+
+This stows `obsidian/` into that vault (so edits to a template anywhere
+`git push`/`git pull` to every vault using this repo), creates the
+`Systems/` `Architecture/Decisions/` `Reference/` `Daily/` content folders if
+they don't exist yet, and installs + enables the Dataview and Excalidraw
+community plugins.
+
+**Deliberately not stowed**, even though they live under the vault:
+- `Systems/`, `Architecture/`, `Reference/`, `Daily/` content — your actual
+  notes. Symlinking these would mean every vault sharing this repo shares
+  one folder of live content instead of having its own.
+- `.obsidian/community-plugins.json` — reflects whatever plugins you're
+  trying on a given vault at a given time; too noisy/personal to track.
+  `obsidian-setup.sh` merges Dataview + Excalidraw into it without
+  overwriting anything else you've enabled.
 
 ## Deliberately not tracked
 
